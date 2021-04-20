@@ -26,6 +26,7 @@
     "chai": "^4.2.0",
     "ethereum-waffle": "^2.4.1",
     "ethereumjs-util": "^6.2.0",
+    "@openzeppelin/contracts": "^3.3.0",
     "mocha": "^6.2.2",
     "ncp": "^2.0.0",
     "prettier": "^1.19.1",
