@@ -109,8 +109,11 @@ contract SimpleStaking is Ownable {
     }
 
     function withdrawRemainReward() public onlyOwner {
-        uint balance = rewardToken.balanceOf(address(this));
-        rewardToken.transfer(owner(), balance);
+        uint amount = rewardToken.balanceOf(address(this));
+        if (rewardToken == stakeToken) {
+            amount = amount.sub(totalCollateral);
+        }
+        rewardToken.transfer(owner(), amount);
     }
 
     function pendingReward(address user) public view returns (uint){
