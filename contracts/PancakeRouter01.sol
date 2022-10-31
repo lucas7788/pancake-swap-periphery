@@ -1,19 +1,20 @@
 pragma solidity =0.6.6;
 
-import '@uniswap/v2-core/contracts/interfaces/IPancakeFactory.sol';
 import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 
 import './libraries/PancakeLibrary.sol';
 import './interfaces/IPancakeRouter01.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
+import './interfaces/IPancakeFactory.sol';
+import './interfaces/IPancakePair.sol';
 
 contract PancakeRouter01 is IPancakeRouter01 {
     address public immutable override factory;
     address public immutable override WETH;
 
     modifier ensure(uint deadline) {
-        require(deadline >= block.timestamp, 'OpenOceanRouter: EXPIRED');
+        require(deadline >= block.timestamp, 'Router: EXPIRED');
         _;
     }
 
@@ -45,12 +46,12 @@ contract PancakeRouter01 is IPancakeRouter01 {
         } else {
             uint amountBOptimal = PancakeLibrary.quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
-                require(amountBOptimal >= amountBMin, 'OpenOceanRouter: INSUFFICIENT_B_AMOUNT');
+                require(amountBOptimal >= amountBMin, 'Router: INSUFFICIENT_B_AMOUNT');
                 (amountA, amountB) = (amountADesired, amountBOptimal);
             } else {
                 uint amountAOptimal = PancakeLibrary.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired);
-                require(amountAOptimal >= amountAMin, 'OpenOceanRouter: INSUFFICIENT_A_AMOUNT');
+                require(amountAOptimal >= amountAMin, 'Router: INSUFFICIENT_A_AMOUNT');
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
         }
@@ -110,8 +111,8 @@ contract PancakeRouter01 is IPancakeRouter01 {
         (uint amount0, uint amount1) = IPancakePair(pair).burn(to);
         (address token0,) = PancakeLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
-        require(amountA >= amountAMin, 'OpenOceanRouter: INSUFFICIENT_A_AMOUNT');
-        require(amountB >= amountBMin, 'OpenOceanRouter: INSUFFICIENT_B_AMOUNT');
+        require(amountA >= amountAMin, 'Router: INSUFFICIENT_A_AMOUNT');
+        require(amountB >= amountBMin, 'Router: INSUFFICIENT_B_AMOUNT');
     }
     function removeLiquidityETH(
         address token,
@@ -184,7 +185,7 @@ contract PancakeRouter01 is IPancakeRouter01 {
         uint deadline
     ) external override ensure(deadline) returns (uint[] memory amounts) {
         amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'OpenOceanRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'Router: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, to);
     }
@@ -196,7 +197,7 @@ contract PancakeRouter01 is IPancakeRouter01 {
         uint deadline
     ) external override ensure(deadline) returns (uint[] memory amounts) {
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'OpenOceanRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= amountInMax, 'Router: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, to);
     }
@@ -207,9 +208,9 @@ contract PancakeRouter01 is IPancakeRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'OpenOceanRouter: INVALID_PATH');
+        require(path[0] == WETH, 'Router: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsOut(factory, msg.value, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'OpenOceanRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'Router: INSUFFICIENT_OUTPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
@@ -220,9 +221,9 @@ contract PancakeRouter01 is IPancakeRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'OpenOceanRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'Router: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'OpenOceanRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= amountInMax, 'Router: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, address(this));
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -234,9 +235,9 @@ contract PancakeRouter01 is IPancakeRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'OpenOceanRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'Router: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'OpenOceanRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'Router: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, address(this));
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -249,9 +250,9 @@ contract PancakeRouter01 is IPancakeRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'OpenOceanRouter: INVALID_PATH');
+        require(path[0] == WETH, 'Router: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= msg.value, 'OpenOceanRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= msg.value, 'Router: EXCESSIVE_INPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
